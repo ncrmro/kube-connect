@@ -376,11 +376,14 @@ control plane, and Headscale versions tested by CI.
 ### KC-090: Provider-native local lane
 
 The repository MUST provide a disposable local end-to-end lane that uses a
-real Forgejo server, a native Forgejo Actions runner with
-`enable-openid-connect: true`, a real Headscale control plane, the
-kube-connect broker, and a Kubernetes API configured to validate Forgejo OIDC.
-Mocks MAY be used by faster test layers but MUST NOT substitute for these
-components in this lane.
+Forgejo server, a Forgejo Actions runner with `enable-openid-connect: true`,
+Headscale, the kube-connect broker, and a Kubernetes API that validates Forgejo
+OIDC. In this requirement, native means that Forgejo dispatches the workflow
+and Forgejo Runner executes it. Faster test layers MAY use mocks. This lane
+MUST use the listed components.
+
+The compatibility lock MUST pin the Forgejo Helm chart source, version, and
+digest, plus Forgejo and Forgejo Runner image versions and digests.
 
 ### KC-091: Two-cluster isolation
 
@@ -388,46 +391,56 @@ The local lane MUST separate management services from the target Kubernetes
 API. Forgejo, its runner, Headscale, and the broker MUST run in a management
 cluster; OIDC authentication and RBAC fixtures MUST run in a distinct target
 cluster. The runner MUST NOT receive a target-cluster service-account token,
-target RBAC, or a direct route to the target API. A test MUST prove that direct
-access fails before Headscale enrollment.
+target RBAC, or a direct route to the target API.
+
+While an independent check confirms that the target API is healthy, the runner
+MUST fail a TCP or TLS connection to its underlay address before enrollment.
+After enrollment, the runner MUST reach that API only through its
+Headscale-managed overlay address. Test evidence MUST name both attempted
+endpoints and distinguish a routing or policy denial from DNS or service
+failure.
 
 ### KC-092: Headscale chart lock
 
 The management cluster MUST install Headscale from
-`oci://ghcr.io/gabe565/charts/headscale`. The fixture MUST pin the Helm chart
-version and resolved OCI manifest digest in a machine-readable compatibility
-lock and MUST lock the images and enabled chart dependencies rendered by that
-release. The initial reviewed baseline is chart `0.16.0` with application
-version `v0.25.0`; changing either MUST be explicit and MUST rerun the native
-end-to-end lane. The chart is community-maintained and MUST NOT be treated as
-an upstream Headscale release artifact.
+`oci://ghcr.io/gabe565/charts/headscale`. A machine-readable compatibility lock
+MUST pin the Helm chart version, resolved OCI manifest digest, enabled chart
+dependency versions and digests, and all rendered container image digests. The
+initial candidate baseline is chart `0.16.0` with application version
+`v0.25.0`. Before accepting the baseline, the fixture MUST verify its metadata
+and record its OCI digest. Changing either version MUST update the lock and
+rerun the native end-to-end lane. Compatibility data MUST identify the chart
+as community-maintained.
 
 ### KC-093: Headscale configuration
 
-The Headscale release MUST persist control-plane state and explicitly
-configure its HTTPS server URL, a distinct MagicDNS base domain, database
-mode, and ACL policy. TLS MUST terminate with a cert-manager-managed
-certificate. Broker-created pre-authentication keys MUST remain one-use,
-ephemeral, and constrained by administrator-owned target mappings as required
-by KC-052 and KC-053; Helm values MUST NOT become a caller-controlled
-authorization surface.
+The Headscale release MUST persist control-plane state, use SQLite on its
+persistent volume, and disable the optional PostgreSQL subchart. It MUST
+configure its HTTPS server URL, a distinct MagicDNS base domain, and ACL
+policy. TLS MUST terminate with a cert-manager-managed certificate.
+Broker-created pre-authentication keys MUST remain one-use, ephemeral, and
+constrained by administrator-owned target mappings as required by KC-052 and
+KC-053. The action and broker APIs MUST NOT expose authorization-related Helm
+values.
 
 ### KC-094: Cert-manager ownership
 
-The local lane MAY assume cert-manager is already installed and ready. Project
-charts and fixtures MUST NOT embed, install, upgrade, or uninstall
-cert-manager. They MAY create namespaced `Issuer` and `Certificate` resources
-that reference the lab trust root. The harness MUST distribute the resulting
-CA trust explicitly to every client that needs it and MUST remove only the
-certificate resources it owns.
+Before the lane starts, the management cluster MUST have the cert-manager
+version recorded in the compatibility lock. The harness MUST verify that its
+APIs and controllers are ready. If either check fails, the harness MUST stop
+before mutating the cluster. Project charts and fixtures MUST NOT embed,
+install, upgrade, or uninstall cert-manager. They MAY create namespaced
+`Issuer` and `Certificate` resources that reference the lab trust root. The
+harness MUST distribute the resulting CA trust to every client that needs it
+and MUST remove only the certificate resources it owns.
 
 ### KC-095: Forgejo runner containment
 
 The local Forgejo Actions runner MUST be ephemeral and repository-scoped. If
 the test runner uses a privileged Docker-in-Docker backend, it MUST run in a
-dedicated namespace, MUST disable automatic Kubernetes service-account token
-mounting, MUST have no Kubernetes RBAC, and MUST be treated as disposable
-test infrastructure rather than a production deployment recommendation.
+dedicated namespace with automatic Kubernetes service-account token mounting
+disabled and no Kubernetes RBAC. It is disposable test infrastructure and MUST
+NOT be presented as a production deployment.
 
 ### KC-096: End-to-end evidence
 

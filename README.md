@@ -126,8 +126,8 @@ compatibility matrix is verified.
 
 ## Local end-to-end architecture
 
-The full Forgejo and Headscale path will run as a disposable, two-cluster lab
-from the repository's devenv v2 tasks:
+The repository's devenv v2 tasks will run the local Forgejo/Headscale
+end-to-end lane against a disposable two-cluster lab:
 
 ```text
 management cluster
@@ -144,20 +144,17 @@ target cluster
 
 The management cluster will install the community-maintained
 [`gabe565/headscale`](https://artifacthub.io/packages/helm/gabe565/headscale)
-chart from its OCI publication. The fixture will lock the chart version and
-resolved OCI digest, enable persistent Headscale state, configure the public
-server URL and MagicDNS domain explicitly, and use a cert-manager-managed TLS
-secret.
+chart from OCI at a pinned version and digest. The fixture will persist
+Headscale state, configure the public server URL and MagicDNS domain, and use a
+cert-manager-managed TLS secret.
 
-Cert-manager is a lab prerequisite, not a chart dependency owned by this
-project. The harness may create a namespaced `Issuer` and `Certificate`, but it
-will not install, upgrade, or remove cert-manager. The Forgejo runner is
-test-only infrastructure: it receives no target-cluster service-account token
-or RBAC, and direct network access from the runner to the target API must fail.
+The management cluster must already have cert-manager installed. The harness
+verifies that it is ready and manages only its namespaced `Issuer` and
+`Certificate` resources. The Forgejo runner is test-only infrastructure: it
+receives no target-cluster service-account token or RBAC, and direct network
+access from the runner to the target API must fail.
 
-This deployment exists to verify the action and broker. It does not change the
-product boundary: the released action will not provision Forgejo, Headscale,
-cert-manager, Kubernetes authentication, or RBAC.
+The lab verifies the action and broker; it is not part of the released action.
 
 ## Security boundary
 

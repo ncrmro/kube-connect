@@ -189,11 +189,12 @@ passes.
   Requirements: KC-027.
   Verification: allowed and denied checks report clearly without changing
   RBAC.
-- [ ] **T-091 — Run the native end-to-end matrix.** Verify GitHub/Forgejo
-  across Tailscale/Headscale against a dedicated Kubernetes test cluster.
+- [ ] **T-091 — Run the remaining end-to-end matrix.** Verify
+  GitHub/Tailscale, GitHub/Headscale, and Forgejo/Tailscale against dedicated
+  test infrastructure.
   Requirements: KC-082, KC-083.
-  Verification: every advertised cell authenticates, exercises scoped RBAC,
-  and cleans up.
+  Verification: each of these three cells authenticates, exercises scoped
+  RBAC, and cleans up.
 
 ## `test(e2e): verify Forgejo Headscale path`
 
@@ -208,18 +209,21 @@ passes.
   Requirements: KC-094.
   Verification: setup fails clearly when cert-manager is absent and teardown
   leaves the cert-manager installation untouched.
-- [ ] **T-094 — Install the locked Headscale chart.** Deploy
-  `oci://ghcr.io/gabe565/charts/headscale` from the version and digest lock,
-  enable persistent state, and configure HTTPS server URL, MagicDNS, database,
-  ACL, ingress, and CA trust values.
+- [ ] **T-094 — Install the locked Headscale chart.** Resolve the candidate
+  version of `oci://ghcr.io/gabe565/charts/headscale`, verify its metadata,
+  record its OCI digest, and pull the matching chart package. Enable persistent
+  SQLite state, disable the optional PostgreSQL subchart, configure HTTPS,
+  MagicDNS, ACL, the ingress TLS secret, and client CA trust, then deploy the
+  package.
   Requirements: KC-052, KC-053, KC-092 through KC-094.
   Verification: rendered manifests match policy and Headscale survives a pod
   restart with its state intact.
 - [ ] **T-095 — Install and seed Forgejo.** Deploy a pinned Forgejo chart,
   create the fixture repository and protected ref, enable Actions OIDC, and
-  register an ephemeral repository-scoped runner.
+  register an ephemeral repository-scoped runner. Record the chart, Forgejo
+  image, and runner versions and digests in the compatibility lock.
   Requirements: KC-013, KC-090, KC-095, KC-096.
-  Verification: a native runner can request an audience-specific Forgejo
+  Verification: Forgejo Runner can request an audience-specific Forgejo
   token from the seeded workflow.
 - [ ] **T-096 — Contain the test runner.** Disable service-account token
   mounting, grant no Kubernetes RBAC, isolate its namespace and egress, and
@@ -231,18 +235,20 @@ passes.
   Forgejo JWT authentication and exact namespace RBAC fixtures to the target
   cluster, then publish its API only on the Headscale-reachable path.
   Requirements: KC-020 through KC-022, KC-091.
-  Verification: direct traffic fails while the enrolled overlay path reaches
-  the API.
+  Verification: an independent control reports a healthy API while the
+  runner's underlay TCP or TLS check fails and its enrolled overlay path
+  succeeds.
 - [ ] **T-098 — Exercise the real workflow.** Dispatch the protected-ref
-  Forgejo workflow through the broker and Headscale, then test separate
-  audiences, replay rejection, successful authentication, and allowed and
-  denied RBAC operations.
+  Forgejo workflow through the broker and Headscale, then verify audience
+  separation, replay rejection, successful authentication, and both allowed
+  and denied RBAC operations.
   Requirements: KC-011, KC-054, KC-081, KC-090, KC-096.
   Verification: every positive and negative assertion produces
   credential-free evidence.
-- [ ] **T-099 — Prove cleanup and record versions.** Cancel and fail fixture
-  jobs, verify runner, network node, key, daemon, and temporary state cleanup,
-  and publish the complete locked compatibility record.
+- [ ] **T-099 — Prove cleanup and record versions.** Cancel one fixture job and
+  fail another. Verify that each removes its runner, overlay node, daemon, and
+  temporary state and leaves no usable pre-auth key, then publish the locked
+  compatibility record.
   Requirements: KC-034, KC-083, KC-085, KC-096.
   Verification: no reusable credential or live ephemeral resource remains.
 

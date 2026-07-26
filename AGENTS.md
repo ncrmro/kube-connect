@@ -33,10 +33,9 @@
 - Prefer immutable repository and owner IDs in trust decisions. Also validate
   issuer, audience, subject, workflow, event, and ref.
 - Reject untrusted pull-request events by default.
-- Keep the full local Forgejo and Headscale lane split into management and
-  target clusters. Install Headscale from the pinned `gabe565/headscale` OCI
-  chart in the management cluster; treat cert-manager as an external
-  prerequisite, never as a project subchart.
+- Run the local Forgejo/Headscale lane across separate management and target
+  clusters. Install Headscale from the pinned `gabe565/headscale` OCI chart in
+  the management cluster, where cert-manager must already be installed.
 - Treat any privileged Forgejo Actions runner chart as disposable test
   infrastructure. Disable service-account token mounting, grant it no
   Kubernetes RBAC, and prevent direct target API access.
@@ -71,9 +70,9 @@
 - Test cleanup after success, action failure, and cancellation where the
   runner permits it.
 - Run provider contract tests against GitHub and Forgejo OIDC fixtures.
-- Run the native Forgejo and Headscale lane with real OIDC, broker exchange,
-  chart-installed Headscale, overlay-only target access, exact RBAC, and
-  cleanup assertions.
+- In the native Forgejo/Headscale lane, exchange an OIDC token through the
+  broker, reach the target only over the overlay, verify allowed and denied
+  RBAC operations, and assert cleanup.
 - Do not claim a provider matrix cell is supported until an end-to-end native
   runner test passes.
 
