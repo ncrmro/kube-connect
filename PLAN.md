@@ -16,6 +16,7 @@ public action.
 ◇  v0.1.0 (next)
 │
 ○  docs: publish operator runbooks
+○  test(e2e): verify Forgejo Headscale path
 ○  feat(action): verify scoped cluster access
 ○  feat(action): compose the portable action
 │  ── milestone: portable Kubernetes connection ──
@@ -29,7 +30,8 @@ public action.
 ○  test(ci): add native provider matrices
 ○  chore(dev): add reproducible toolchain
 │
-│ ◉  docs: establish project contract        PR draft  agent/initial-design → main
+│ ◉  docs: add Headscale Helm E2E            PR #1 draft  agent/initial-design → main
+│ ○  docs: establish project contract        e6d5aa3
 ├─╯
 ●  chore: initialize repository              3a68033  ← main
 ```
@@ -95,17 +97,22 @@ Requirements: KC-030 through KC-058, KC-063, KC-080, KC-081, KC-083.
 ### Portable Kubernetes connection
 
 `feat(action)` composes the adapters behind the public interface and adds an
-optional, read-only RBAC capability check. `docs` finishes operator and
-consumer runbooks.
+optional, read-only RBAC capability check. `test(e2e)` proves the
+provider-native Forgejo and Headscale path in a disposable two-cluster lab.
+`docs` finishes operator and consumer runbooks.
 
 Exit criteria:
 
 - all four CI/network matrix cells pass native end-to-end tests;
+- the local Forgejo and Headscale lane uses the locked `gabe565/headscale`
+  chart and proves that the target API has no direct runner route;
+- cert-manager remains an external prerequisite with explicit CA
+  distribution;
 - unsupported or unsafe combinations fail before mutation;
 - operator documentation covers setup, rotation, audit, and revocation; and
 - a release candidate meets the supply-chain requirements.
 
-Requirements: KC-001 through KC-085.
+Requirements: KC-001 through KC-096.
 
 ## Planned pull-request slices
 
@@ -116,6 +123,7 @@ Requirements: KC-001 through KC-085.
 | `feat/headscale-broker` | `feat(broker)` | KC-050–KC-058 |
 | `feat/network-adapters` | two `feat(network)` commits | KC-030–KC-043, KC-050 |
 | `feat/portable-action` | two `feat(action)` commits | KC-001–KC-005, KC-060–KC-064 |
+| `test/forgejo-headscale-e2e` | `test(e2e): verify Forgejo Headscale path` | KC-090–KC-096 |
 | `docs/operator-runbooks` | `docs: publish operator runbooks` | KC-084–KC-085 |
 
 Branches may be stacked when a later slice depends on an unmerged earlier
@@ -133,6 +141,9 @@ slice. They land bottom-up and are retargeted to `main` after their base lands.
 - The public repository remains environment-neutral. Concrete issuers,
   repository IDs, target mappings, hostnames, and RBAC live in deployment
   configuration.
+- The full local Forgejo and Headscale lane uses separate management and
+  target clusters. The management cluster installs the pinned
+  `gabe565/headscale` chart; cert-manager is a prerequisite, not a subchart.
 
 ## Risks
 
@@ -141,5 +152,11 @@ slice. They land bottom-up and are retargeted to `main` after their base lands.
 - Userspace SOCKS5 may not support every Kubernetes streaming operation.
 - Headscale's administrative API has a broader credential boundary than the
   desired broker endpoint and must be isolated.
+- The selected Headscale chart is community-maintained and pins
+  `bjw-s/common` 1.5.1 plus an optional Bitnami PostgreSQL 14.0.5 dependency,
+  so upgrades require rendered-manifest and end-to-end review.
+- A container-backed Forgejo runner may require privileged test
+  infrastructure; namespace, token, RBAC, and network isolation must prevent
+  that privilege from reaching the target cluster.
 - OIDC claim shapes and runner runtimes evolve, so compatibility must be
   versioned and tested rather than assumed.

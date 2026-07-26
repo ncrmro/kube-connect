@@ -371,7 +371,74 @@ The repository MUST publish a versioned compatibility matrix covering GitHub
 runner, Forgejo, Forgejo runner, Kubernetes, Tailscale client, Tailscale
 control plane, and Headscale versions tested by CI.
 
-## 11. References
+## 11. Local Forgejo and Headscale verification
+
+### KC-090: Provider-native local lane
+
+The repository MUST provide a disposable local end-to-end lane that uses a
+real Forgejo server, a native Forgejo Actions runner with
+`enable-openid-connect: true`, a real Headscale control plane, the
+kube-connect broker, and a Kubernetes API configured to validate Forgejo OIDC.
+Mocks MAY be used by faster test layers but MUST NOT substitute for these
+components in this lane.
+
+### KC-091: Two-cluster isolation
+
+The local lane MUST separate management services from the target Kubernetes
+API. Forgejo, its runner, Headscale, and the broker MUST run in a management
+cluster; OIDC authentication and RBAC fixtures MUST run in a distinct target
+cluster. The runner MUST NOT receive a target-cluster service-account token,
+target RBAC, or a direct route to the target API. A test MUST prove that direct
+access fails before Headscale enrollment.
+
+### KC-092: Headscale chart lock
+
+The management cluster MUST install Headscale from
+`oci://ghcr.io/gabe565/charts/headscale`. The fixture MUST pin the Helm chart
+version and resolved OCI manifest digest in a machine-readable compatibility
+lock and MUST lock the images and enabled chart dependencies rendered by that
+release. The initial reviewed baseline is chart `0.16.0` with application
+version `v0.25.0`; changing either MUST be explicit and MUST rerun the native
+end-to-end lane. The chart is community-maintained and MUST NOT be treated as
+an upstream Headscale release artifact.
+
+### KC-093: Headscale configuration
+
+The Headscale release MUST persist control-plane state and explicitly
+configure its HTTPS server URL, a distinct MagicDNS base domain, database
+mode, and ACL policy. TLS MUST terminate with a cert-manager-managed
+certificate. Broker-created pre-authentication keys MUST remain one-use,
+ephemeral, and constrained by administrator-owned target mappings as required
+by KC-052 and KC-053; Helm values MUST NOT become a caller-controlled
+authorization surface.
+
+### KC-094: Cert-manager ownership
+
+The local lane MAY assume cert-manager is already installed and ready. Project
+charts and fixtures MUST NOT embed, install, upgrade, or uninstall
+cert-manager. They MAY create namespaced `Issuer` and `Certificate` resources
+that reference the lab trust root. The harness MUST distribute the resulting
+CA trust explicitly to every client that needs it and MUST remove only the
+certificate resources it owns.
+
+### KC-095: Forgejo runner containment
+
+The local Forgejo Actions runner MUST be ephemeral and repository-scoped. If
+the test runner uses a privileged Docker-in-Docker backend, it MUST run in a
+dedicated namespace, MUST disable automatic Kubernetes service-account token
+mounting, MUST have no Kubernetes RBAC, and MUST be treated as disposable
+test infrastructure rather than a production deployment recommendation.
+
+### KC-096: End-to-end evidence
+
+The local lane MUST dispatch a real protected-ref Forgejo workflow and verify
+separate audiences, broker replay rejection, Headscale enrollment, successful
+authentication, allowed and denied namespace RBAC operations, credential
+redaction, and cleanup. Evidence MUST identify the locked Forgejo, runner,
+Headscale chart, Headscale application, Kubernetes, and cert-manager versions
+without recording credentials.
+
+## 12. References
 
 - [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119)
 - [GitHub Actions OIDC reference](https://docs.github.com/en/actions/reference/security/oidc)
@@ -380,6 +447,8 @@ control plane, and Headscale versions tested by CI.
 - [Forgejo Actions reference](https://forgejo.org/docs/latest/user/actions/reference/)
 - [Tailscale GitHub Action](https://tailscale.com/docs/integrations/github/github-action)
 - [Tailscale daemon reference](https://tailscale.com/docs/reference/tailscaled)
+- [gabe565 Headscale Helm chart](https://artifacthub.io/packages/helm/gabe565/headscale)
+- [gabe565 chart source](https://github.com/gabe565/charts/tree/main/charts/headscale)
 - [Headscale pre-authenticated keys](https://headscale.net/development/usage/getting-started/#pre-authenticated-key)
 - [Kubernetes authentication](https://kubernetes.io/docs/reference/access-authn-authz/authentication/)
 - [Kubernetes client authentication v1](https://kubernetes.io/docs/reference/config-api/client-authentication.v1/)

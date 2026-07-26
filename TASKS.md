@@ -12,7 +12,7 @@ passes.
   Verification: README, requirements, plan, and tasks agree.
 - [x] **T-002 — Record the threat-driven requirements.** Give every normative
   behavior a stable RFC 2119 requirement ID.
-  Requirements: KC-001 through KC-085.
+  Requirements: KC-001 through KC-096.
   Verification: each planned milestone cites its governing requirements.
 - [x] **T-003 — Draw the implementation history.** Order foundation, identity,
   networking, composition, and operations as conventional commits.
@@ -194,6 +194,57 @@ passes.
   Requirements: KC-082, KC-083.
   Verification: every advertised cell authenticates, exercises scoped RBAC,
   and cleans up.
+
+## `test(e2e): verify Forgejo Headscale path`
+
+- [ ] **T-092 — Create the two-cluster lab.** Use devenv v2 tasks to create
+  disposable management and target clusters with isolated state, dynamic host
+  ports, readiness checks, and bounded teardown.
+  Requirements: KC-070, KC-090, KC-091.
+  Verification: concurrent lab runs do not share clusters, ports, or state.
+- [ ] **T-093 — Validate the certificate prerequisite.** Wait for the
+  preinstalled cert-manager APIs and controllers, then apply only
+  repository-owned namespaced issuer and certificate fixtures.
+  Requirements: KC-094.
+  Verification: setup fails clearly when cert-manager is absent and teardown
+  leaves the cert-manager installation untouched.
+- [ ] **T-094 — Install the locked Headscale chart.** Deploy
+  `oci://ghcr.io/gabe565/charts/headscale` from the version and digest lock,
+  enable persistent state, and configure HTTPS server URL, MagicDNS, database,
+  ACL, ingress, and CA trust values.
+  Requirements: KC-052, KC-053, KC-092 through KC-094.
+  Verification: rendered manifests match policy and Headscale survives a pod
+  restart with its state intact.
+- [ ] **T-095 — Install and seed Forgejo.** Deploy a pinned Forgejo chart,
+  create the fixture repository and protected ref, enable Actions OIDC, and
+  register an ephemeral repository-scoped runner.
+  Requirements: KC-013, KC-090, KC-095, KC-096.
+  Verification: a native runner can request an audience-specific Forgejo
+  token from the seeded workflow.
+- [ ] **T-096 — Contain the test runner.** Disable service-account token
+  mounting, grant no Kubernetes RBAC, isolate its namespace and egress, and
+  expose only the services required for the workflow and Headscale path.
+  Requirements: KC-091, KC-095.
+  Verification: the runner has no Kubernetes credentials and cannot reach the
+  target API directly.
+- [ ] **T-097 — Configure the target trust boundary.** Apply structured
+  Forgejo JWT authentication and exact namespace RBAC fixtures to the target
+  cluster, then publish its API only on the Headscale-reachable path.
+  Requirements: KC-020 through KC-022, KC-091.
+  Verification: direct traffic fails while the enrolled overlay path reaches
+  the API.
+- [ ] **T-098 — Exercise the real workflow.** Dispatch the protected-ref
+  Forgejo workflow through the broker and Headscale, then test separate
+  audiences, replay rejection, successful authentication, and allowed and
+  denied RBAC operations.
+  Requirements: KC-011, KC-054, KC-081, KC-090, KC-096.
+  Verification: every positive and negative assertion produces
+  credential-free evidence.
+- [ ] **T-099 — Prove cleanup and record versions.** Cancel and fail fixture
+  jobs, verify runner, network node, key, daemon, and temporary state cleanup,
+  and publish the complete locked compatibility record.
+  Requirements: KC-034, KC-083, KC-085, KC-096.
+  Verification: no reusable credential or live ephemeral resource remains.
 
 ## `docs: publish operator runbooks`
 

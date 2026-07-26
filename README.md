@@ -124,6 +124,41 @@ jobs:
 The Forgejo action reference and runner labels are placeholders until the
 compatibility matrix is verified.
 
+## Local end-to-end architecture
+
+The full Forgejo and Headscale path will run as a disposable, two-cluster lab
+from the repository's devenv v2 tasks:
+
+```text
+management cluster
+├── Forgejo and an isolated ephemeral Actions runner
+├── kube-connect credential broker
+├── gabe565/headscale Helm release
+└── cert-manager-issued service certificates
+
+target cluster
+├── Kubernetes structured JWT authentication for Forgejo
+├── namespace-scoped RBAC fixtures
+└── API endpoint reachable from the runner only through Headscale
+```
+
+The management cluster will install the community-maintained
+[`gabe565/headscale`](https://artifacthub.io/packages/helm/gabe565/headscale)
+chart from its OCI publication. The fixture will lock the chart version and
+resolved OCI digest, enable persistent Headscale state, configure the public
+server URL and MagicDNS domain explicitly, and use a cert-manager-managed TLS
+secret.
+
+Cert-manager is a lab prerequisite, not a chart dependency owned by this
+project. The harness may create a namespaced `Issuer` and `Certificate`, but it
+will not install, upgrade, or remove cert-manager. The Forgejo runner is
+test-only infrastructure: it receives no target-cluster service-account token
+or RBAC, and direct network access from the runner to the target API must fail.
+
+This deployment exists to verify the action and broker. It does not change the
+product boundary: the released action will not provision Forgejo, Headscale,
+cert-manager, Kubernetes authentication, or RBAC.
+
 ## Security boundary
 
 `kube-connect` will configure connectivity and credentials only. It will not
@@ -169,6 +204,7 @@ The initial release does not aim to:
 - [GitHub Actions OIDC reference](https://docs.github.com/en/actions/reference/security/oidc)
 - [Forgejo Actions OIDC](https://forgejo.org/docs/latest/user/actions/security-openid-connect/)
 - [Tailscale GitHub Action](https://tailscale.com/docs/integrations/github/github-action)
+- [gabe565 Headscale Helm chart](https://artifacthub.io/packages/helm/gabe565/headscale)
 - [Headscale pre-authenticated keys](https://headscale.net/development/usage/getting-started/#pre-authenticated-key)
 - [Kubernetes authentication](https://kubernetes.io/docs/reference/access-authn-authz/authentication/)
 - [Kubernetes client authentication v1](https://kubernetes.io/docs/reference/config-api/client-authentication.v1/)
